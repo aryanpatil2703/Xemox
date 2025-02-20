@@ -15,7 +15,11 @@ function App() {
           Connect Wallet 
         </button>
       </div>
-      
+      <div className="card">
+        <button onClick={login}>
+          Connect Wallet 
+        </button>
+      </div>
     </>
   )
 }
