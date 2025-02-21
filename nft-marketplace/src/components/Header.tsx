@@ -8,8 +8,8 @@ export default function Header() {
             <div className="container mx-auto flex justify-between items-center px-6">
                 {/* Logo Section */}
                 <div className="flex items-center space-x-3">
-                    <img src="https://nft-marketplace-templates.vercel.app/logo.svg" alt="logo" className="h-10" />
-                    <h1 className="text-xl font-bold">Marketplace</h1>
+                    <img src="Xemox2\Xemox\nft-marketplace\src\assets\logo.png" alt="logo" className="h-10" />
+                    <h1 className="text-xl font-bold">XEMOX</h1>
                 </div>
                 
                 {/* Navigation Links */}
