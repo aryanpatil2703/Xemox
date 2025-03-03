@@ -11,9 +11,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       appId={import.meta.env.VITE_PRIVY_APP_ID}
       config={{
         appearance: {
-          theme: "dark",
-          accentColor: "#676FFF",
+          theme: "#3F3D56",
+          accentColor: "#FFD700",
           logo: "https://your-logo-url",
+          showWalletLoginFirst: true, 
         },
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
