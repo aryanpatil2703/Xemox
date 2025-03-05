@@ -1,36 +1,64 @@
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { BrowserProvider, JsonRpcProvider, formatEther } from "ethers";
-
 
 export default function Profile() {
-    const { user, logout } = usePrivy();
+    const { user, logout, ready } = usePrivy();
+    const { wallets } = useWallets();
+
     const [email, setEmail] = useState<string | null>(null);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [walletBalance, setWalletBalance] = useState<string | null>(null);
 
     useEffect(() => {
-        if (user) {
-            setEmail(typeof user.email === "string" ? user.email : "Not provided");
-            const address = user.wallet?.address || null;
-            setWalletAddress(address);
-            
-            if (address) {
-                fetchBalance(address);
-            }
+        if (!ready) return; // Ensure Privy is initialized before running
+        if (!user) return;
+
+        setEmail(typeof user.email === 'string' ? user.email : "Not provided");
+
+        // Determine the active wallet address
+        let activeWallet = wallets.find(wallet => wallet.connectedAt)?.address || user.wallet?.address || null;
+        setWalletAddress(activeWallet);
+
+        if (activeWallet) {
+            fetchBalance(activeWallet);
         }
-    }, [user]);
+    }, [user, wallets, ready]);
+
     async function fetchBalance(address: string) {
         try {
-            const provider = new JsonRpcProvider("https://mainnet.infura.io/v3/76a64d202adf48a5be935673f13574c0");
+            let provider: ethers.Provider;
+
+            if (wallets.length > 0) {
+                const connectedWallet = wallets.find(wallet => wallet.connectedAt);
+                if (connectedWallet?.getEthereumProvider) {
+                    const privyProvider = await connectedWallet.getEthereumProvider();
+                    provider = new ethers.BrowserProvider(privyProvider);
+                    console.log("Using Privy Provider");
+                } else {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    console.log("Using Browser Provider (MetaMask)");
+                }
+            } else {
+                provider = new ethers.JsonRpcProvider("https://mainnet.infura.io/v3/76a64d202adf48a5be935673f13574c0");
+                console.log("Using Public RPC Provider");
+            }
+
             const balanceWei = await provider.getBalance(address);
-            setWalletBalance(formatEther(balanceWei)); 
+            setWalletBalance(ethers.formatEther(balanceWei));
         } catch (error) {
             console.error("Error fetching balance:", error);
+            setWalletBalance("Error");
         }
     }
-    
+
+    if (!ready) {
+        return (
+            <div className="flex justify-center items-center h-screen bg-gray-100">
+                <p className="text-xl text-gray-600">Initializing...</p>
+            </div>
+        );
+    }
 
     if (!user) {
         return (

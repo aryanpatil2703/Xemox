@@ -3,11 +3,14 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useAccount } from "wagmi";
 import { useNavigate } from "react-router-dom";
 
+
 export default function WalletConnect() {
-  const { user, login, logout } = usePrivy();
+  const { user, login, logout, connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const { address } = useAccount();
   const navigate = useNavigate();
+ 
+
 
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -21,7 +24,7 @@ export default function WalletConnect() {
 
   const handleMouseEnter = () => {
     if (closeTimeout) {
-      clearTimeout(closeTimeout); // Cancel closing if hovering back
+      clearTimeout(closeTimeout);
       setCloseTimeout(null);
     }
     if (user && displayedAddress) {
@@ -32,8 +35,13 @@ export default function WalletConnect() {
   const handleMouseLeave = () => {
     const timeout = setTimeout(() => {
       setIsDropdownOpen(false);
-    }, 150); 
+    }, 150);
     setCloseTimeout(timeout);
+  };
+
+  const handleConnect = () => {
+    connectWallet();
+    login();
   };
 
   return (
@@ -44,14 +52,14 @@ export default function WalletConnect() {
     >
       {user && displayedAddress ? (
         <button
-          onClick={() => navigate("/profile")} // Navigate to Profile page
-          className="text-black bg-white/30 backdrop-blur-800 border border-white px-4 py-2 rounded-lg hover:bg-tranparent transition duration-300"
+          onClick={() => navigate("/profile")}
+          className="text-black bg-white/30 backdrop-blur-800 border border-white px-4 py-2 rounded-lg hover:bg-transparent transition duration-300"
         >
           {`${displayedAddress.slice(0, 6)}...${displayedAddress.slice(-4)}`}
         </button>
       ) : (
         <button
-          onClick={login}
+          onClick={handleConnect}
           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
         >
           Connect Wallet
@@ -62,7 +70,7 @@ export default function WalletConnect() {
       {isDropdownOpen && user && displayedAddress && (
         <div className="absolute right-0 top-full mt-2 w-48 bg-white/30 backdrop-blur-800 border border-gray-300 rounded-lg shadow-lg text-black">
           <button
-            onClick={() => navigate("/profile")} // Navigate to Profile page
+            onClick={() => navigate("/profile")}
             className="block w-full text-left px-4 py-2 hover:bg-gray-200 cursor-pointer"
           >
             Profile
