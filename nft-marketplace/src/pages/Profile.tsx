@@ -11,12 +11,11 @@ export default function Profile() {
     const [walletBalance, setWalletBalance] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!ready) return; // Ensure Privy is initialized before running
+        if (!ready) return;
         if (!user) return;
 
         setEmail(typeof user.email === 'string' ? user.email : "Not provided");
 
-        // Determine the active wallet address
         let activeWallet = wallets.find(wallet => wallet.connectedAt)?.address || user.wallet?.address || null;
         setWalletAddress(activeWallet);
 
@@ -54,7 +53,7 @@ export default function Profile() {
 
     if (!ready) {
         return (
-            <div className="flex justify-center items-center h-screen bg-gray-100">
+            <div className="flex justify-center items-center h-screen bg-white">
                 <p className="text-xl text-gray-600">Initializing...</p>
             </div>
         );
@@ -62,29 +61,29 @@ export default function Profile() {
 
     if (!user) {
         return (
-            <div className="flex justify-center items-center h-screen bg-gray-100">
+            <div className="flex justify-center items-center h-screen bg-white">
                 <p className="text-xl text-red-500">No user logged in</p>
             </div>
         );
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-300 p-6">
-            <div className="p-8 w-full max-w-lg text-center">
-                <h1 className="text-3xl font-bold mb-6">User Profile</h1>
+        <div className="flex items-center justify-center min-h-screen bg-white p-6">
+            <div className="p-8 w-full max-w-lg text-center border border-gray-300 shadow-lg rounded-lg bg-white">
+                <h1 className="text-3xl font-bold mb-6 text-black">User Profile</h1>
 
                 {/* Email */}
-                <p className="text-lg font-semibold text-gray-800 mb-2">
+                <p className="text-lg font-semibold text-black mb-2">
                     <strong>Email:</strong> {email}
                 </p>
 
                 {/* Wallet Address */}
-                <p className="text-lg font-semibold text-gray-800 mb-2 break-all">
+                <p className="text-lg font-semibold text-black mb-2 break-all">
                     <strong>Wallet Address:</strong> {walletAddress || "Not connected"}
                 </p>
 
                 {/* Wallet Balance */}
-                <p className="text-lg font-semibold text-gray-800 mb-4">
+                <p className="text-lg font-semibold text-black mb-4">
                     <strong>Balance:</strong> {walletBalance !== null ? `${walletBalance} ETH` : "Fetching..."}
                 </p>
 

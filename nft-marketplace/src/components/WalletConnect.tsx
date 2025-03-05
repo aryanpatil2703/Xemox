@@ -3,14 +3,11 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useAccount } from "wagmi";
 import { useNavigate } from "react-router-dom";
 
-
 export default function WalletConnect() {
   const { user, login, logout, connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const { address } = useAccount();
   const navigate = useNavigate();
- 
-
 
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -53,14 +50,14 @@ export default function WalletConnect() {
       {user && displayedAddress ? (
         <button
           onClick={() => navigate("/profile")}
-          className="text-black bg-white/30 backdrop-blur-800 border border-white px-4 py-2 rounded-lg hover:bg-transparent transition duration-300"
+          className="text-white bg-gray-900 border border-gray-700 px-4 py-2 rounded-lg hover:bg-gray-800 transition duration-300"
         >
           {`${displayedAddress.slice(0, 6)}...${displayedAddress.slice(-4)}`}
         </button>
       ) : (
         <button
           onClick={handleConnect}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+          className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-4 py-2 rounded-lg transition duration-300 shadow-md"
         >
           Connect Wallet
         </button>
@@ -68,16 +65,16 @@ export default function WalletConnect() {
 
       {/* Dropdown Menu */}
       {isDropdownOpen && user && displayedAddress && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white/30 backdrop-blur-800 border border-gray-300 rounded-lg shadow-lg text-black">
+        <div className="absolute right-0 top-full mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-lg text-white">
           <button
             onClick={() => navigate("/profile")}
-            className="block w-full text-left px-4 py-2 hover:bg-gray-200 cursor-pointer"
+            className="block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
           >
             Profile
           </button>
           <button
             onClick={logout}
-            className="block w-full text-left px-4 py-2 hover:bg-gray-200 cursor-pointer"
+            className="block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
           >
             Disconnect Wallet
           </button>
