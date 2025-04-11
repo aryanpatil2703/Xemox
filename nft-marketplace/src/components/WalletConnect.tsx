@@ -3,7 +3,11 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useAccount } from "wagmi";
 import { useNavigate } from "react-router-dom";
 
-export default function WalletConnect() {
+interface WalletConnectProps {
+  onWalletUpdate?: (address: string | null) => void; // ✅ Made optional with a default function
+}
+
+export default function WalletConnect({ onWalletUpdate = () => {} }: WalletConnectProps) {
   const { user, login, logout, connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const { address } = useAccount();
@@ -14,7 +18,10 @@ export default function WalletConnect() {
   const [closeTimeout, setCloseTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setWalletAddress(wallets.length > 0 ? wallets[0]?.address ?? null : null);
+    const newAddress = wallets.length > 0 ? wallets[0]?.address ?? null : null;
+    setWalletAddress(newAddress);
+    console.log("Wallet updated:", newAddress); // ✅ Debugging log
+    onWalletUpdate(newAddress);
   }, [wallets]);
 
   const displayedAddress = address || walletAddress;
@@ -41,12 +48,15 @@ export default function WalletConnect() {
     login();
   };
 
+  const handleDisconnect = () => {
+    logout();
+    setWalletAddress(null);
+    console.log("Wallet disconnected");
+    onWalletUpdate(null);
+  };
+
   return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       {user && displayedAddress ? (
         <button
           onClick={() => navigate("/profile")}
@@ -73,7 +83,7 @@ export default function WalletConnect() {
             Profile
           </button>
           <button
-            onClick={logout}
+            onClick={handleDisconnect}
             className="block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
           >
             Disconnect Wallet
