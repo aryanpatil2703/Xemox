@@ -3,16 +3,16 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
-contract XemoxNFT is ERC721URIStorage {
-    uint256 private _tokenIdCounter;
+contract AryanNFT is ERC721URIStorage {
+    uint256 private _tokenIds;
 
-    constructor() ERC721("XemoxNFT", "XEM") {}
+    constructor() ERC721("AryanNFT", "ANFT") {}
 
     function mintNFT(string memory metadataURI) public returns (uint256) {
-        _tokenIdCounter++;
-        uint256 newItemId = _tokenIdCounter;
+        _tokenIds++;
+        uint256 newItemId = _tokenIds;
 
-        _mint(msg.sender, newItemId); // Mint to the sender's wallet
+        _mint(msg.sender, newItemId);
         _setTokenURI(newItemId, metadataURI);
 
         return newItemId;
