@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { Web3Storage } from "web3.storage";
 import contractABI from "../abi/NFTContract.json";
 import { useWalletClient } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
 
 export default function CreateNFT() {
-  const { data: walletClient } = useWalletClient(); // ✅ Get signer from wagmi
-  const { ready, authenticated } = usePrivy(); // Optional, to guard against early interaction
-  // Define the contract address constant
+  const { data: walletClient } = useWalletClient();
+  const { ready, authenticated } = usePrivy();
+
   const CONTRACT_ADDRESS = "0xCc6E8d51dE1DCBDD9bcd1341403e7152828C262e";
 
   const [name, setName] = useState("");
@@ -36,29 +35,50 @@ export default function CreateNFT() {
     }
   };
 
-  const uploadToIPFS = async () => {
+  const uploadToPinata = async () => {
     if (!imageFile) return null;
 
-    const client = new Web3Storage({
-      token: import.meta.env.VITE_WEB3STORAGE_TOKEN as string,
-    });
+    const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string;
 
-    const metadata = {
-      name,
-      description,
-      image: imageFile.name,
-    };
+    try {
+      // Step 1: Upload image file
+      const formData = new FormData();
+      formData.append("file", imageFile);
 
-    const metadataFile = new File(
-      [JSON.stringify(metadata)],
-      "metadata.json",
-      { type: "application/json" }
-    );
+      const imageRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${PINATA_JWT}`,
+        },
+        body: formData,
+      });
 
-    const files = [imageFile, metadataFile];
+      const imageData = await imageRes.json();
+      const imageCID = imageData.IpfsHash;
+      const imageUrl = `https://gateway.pinata.cloud/ipfs/${imageCID}`;
 
-    const cid = await client.put(files);
-    return `https://${cid}.ipfs.dweb.link/metadata.json`;
+      // Step 2: Upload metadata JSON
+      const metadata = {
+        name,
+        description,
+        image: imageUrl,
+      };
+
+      const metadataRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${PINATA_JWT}`,
+        },
+        body: JSON.stringify(metadata),
+      });
+
+      const metadataData = await metadataRes.json();
+      return `https://gateway.pinata.cloud/ipfs/${metadataData.IpfsHash}`;
+    } catch (error) {
+      console.error("Pinata upload failed:", error);
+      return null;
+    }
   };
 
   const mintNFT = async () => {
@@ -66,13 +86,11 @@ export default function CreateNFT() {
 
     try {
       setMinting(true);
-
-      const provider = new ethers.BrowserProvider(walletClient); // ✅ Use wagmi's signer
+      const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
       const tx = await contract.mint(walletAddress, metadataURI);
-
       await tx.wait();
       setTxHash(tx.hash);
       console.log("NFT Minted:", tx.hash);
@@ -86,7 +104,7 @@ export default function CreateNFT() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const uri = await uploadToIPFS();
+    const uri = await uploadToPinata();
     setMetadataURI(uri);
   };
 
