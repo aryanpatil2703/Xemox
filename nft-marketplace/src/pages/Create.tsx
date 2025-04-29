@@ -9,39 +9,53 @@ export default function CreateNFT() {
   const { ready, authenticated } = usePrivy();
 
   const CONTRACT_ADDRESS = "0xCc6E8d51dE1DCBDD9bcd1341403e7152828C262e";
+  const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [metadataURI, setMetadataURI] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [minting, setMinting] = useState(false);
+  const [status, setStatus] = useState<"idle" | "uploading" | "minting">("idle");
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchAddress() {
-      if (walletClient) {
-        const address = await walletClient.account.address;
-        setWalletAddress(address);
-      }
+    let mounted = true;
+    if (walletClient?.account?.address && mounted) {
+      setWalletAddress(walletClient.account.address);
     }
-
-    fetchAddress();
+    return () => {
+      mounted = false;
+    };
   }, [walletClient]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (!file.type.startsWith("image/")) {
+        setError("Only image files are allowed.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size must be less than 5MB.");
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const uploadToPinata = async () => {
-    if (!imageFile) return null;
+    if (!imageFile) {
+      setError("Please upload an image.");
+      return null;
+    }
 
-    const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string;
+    setStatus("uploading");
 
     try {
-      // Step 1: Upload image file
       const formData = new FormData();
       formData.append("file", imageFile);
 
@@ -53,11 +67,10 @@ export default function CreateNFT() {
         body: formData,
       });
 
+      if (!imageRes.ok) throw new Error("Image upload failed.");
       const imageData = await imageRes.json();
-      const imageCID = imageData.IpfsHash;
-      const imageUrl = `https://gateway.pinata.cloud/ipfs/${imageCID}`;
+      const imageUrl = `https://gateway.pinata.cloud/ipfs/${imageData.IpfsHash}`;
 
-      // Step 2: Upload metadata JSON
       const metadata = {
         name,
         description,
@@ -73,46 +86,66 @@ export default function CreateNFT() {
         body: JSON.stringify(metadata),
       });
 
+      if (!metadataRes.ok) throw new Error("Metadata upload failed.");
       const metadataData = await metadataRes.json();
       return `https://gateway.pinata.cloud/ipfs/${metadataData.IpfsHash}`;
-    } catch (error) {
-      console.error("Pinata upload failed:", error);
+    } catch (err) {
+      console.error("Pinata upload failed:", err);
+      setError("Failed to upload to Pinata.");
       return null;
+    } finally {
+      setStatus("idle");
     }
   };
 
-  const mintNFT = async () => {
-    if (!walletClient || !walletAddress || !metadataURI) return;
+  const mintNFT = async (uri: string) => {
+    if (!walletClient || !walletAddress) {
+      setError("Wallet not connected.");
+      return;
+    }
 
     try {
-      setMinting(true);
+      setStatus("minting");
       const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
-
       const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
-      const tx = await contract.mint(walletAddress, metadataURI);
+      const tx = await contract.mint(walletAddress, uri);
       await tx.wait();
       setTxHash(tx.hash);
-      console.log("NFT Minted:", tx.hash);
-    } catch (error) {
-      console.error("Minting failed:", error);
-      alert("Minting failed. See console for details.");
+    } catch (err) {
+      console.error("Minting failed:", err);
+      setError("Minting failed. See console for details.");
     } finally {
-      setMinting(false);
+      setStatus("idle");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (status !== "idle") return;
+
+    setError(null);
+
+    if (!name.trim() || !description.trim()) {
+      setError("Name and description are required.");
+      return;
+    }
+
     const uri = await uploadToPinata();
-    setMetadataURI(uri);
+    if (!uri) return;
+
+    await mintNFT(uri);
   };
 
-  useEffect(() => {
-    if (metadataURI) {
-      mintNFT();
-    }
-  }, [metadataURI]);
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setImageFile(null);
+    setImagePreview(null);
+    setTxHash(null);
+    setError(null);
+    setStatus("idle");
+  };
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-gray-900 rounded-xl shadow-lg text-white">
@@ -125,6 +158,7 @@ export default function CreateNFT() {
           onChange={(e) => setName(e.target.value)}
           className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-700"
           required
+          disabled={status !== "idle"}
         />
         <textarea
           placeholder="Description"
@@ -132,20 +166,28 @@ export default function CreateNFT() {
           onChange={(e) => setDescription(e.target.value)}
           className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-700"
           required
+          disabled={status !== "idle"}
         />
         <input
           type="file"
           onChange={handleFileChange}
           accept="image/*"
           className="w-full"
-          required
+          disabled={status !== "idle"}
         />
+        {imagePreview && (
+          <img src={imagePreview} alt="Preview" className="w-full h-64 object-contain mt-2 rounded-md" />
+        )}
         <button
           type="submit"
-          disabled={!ready || !authenticated || !walletClient || minting}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-300"
+          disabled={!ready || !authenticated || !walletClient || status !== "idle"}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-300 w-full"
         >
-          {minting ? "Minting..." : "Upload & Mint NFT"}
+          {status === "uploading"
+            ? "Uploading..."
+            : status === "minting"
+            ? "Minting..."
+            : "Upload & Mint NFT"}
         </button>
       </form>
 
@@ -160,6 +202,18 @@ export default function CreateNFT() {
           >
             View on Etherscan
           </a>
+          <button
+            onClick={resetForm}
+            className="mt-2 text-sm text-gray-300 underline hover:text-white"
+          >
+            Mint Another
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 p-3 bg-red-800 rounded-lg border border-red-500">
+          <p className="text-red-300">{error}</p>
         </div>
       )}
     </div>
