@@ -109,7 +109,9 @@ export default function CreateNFT() {
       const provider = new ethers.BrowserProvider(walletClient);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
-      const tx = await contract.mint(walletAddress, uri);
+      
+      // Here we mint the NFT by passing the wallet address and metadata URI
+      const tx = await contract.mint(walletAddress, uri); // Correct function call
       await tx.wait();
       setTxHash(tx.hash);
     } catch (err) {
