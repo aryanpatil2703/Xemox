@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Profile from "./pages/Profile";
 import Hero from "./components/Hero";
 import Create from "./pages/Create";
+import Marketplace from "./pages/Marketplace";
 
 export default function App() {
     return (
@@ -15,6 +16,8 @@ export default function App() {
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/explore" element={<h1 className="text-center text-3xl mt-20">Explore NFTs</h1>} />
                         <Route path="/Create" element={<Create />} />
+                        <Route path="/Marketplace" element={<Marketplace />} />
+
                     </Routes>
                 </main>
             </div>

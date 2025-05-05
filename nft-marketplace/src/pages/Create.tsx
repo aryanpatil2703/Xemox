@@ -8,7 +8,7 @@ export default function CreateNFT() {
   const { data: walletClient } = useWalletClient();
   const { ready, authenticated } = usePrivy();
 
-  const CONTRACT_ADDRESS = "0xCc6E8d51dE1DCBDD9bcd1341403e7152828C262e";
+  const CONTRACT_ADDRESS = "0xD94186784d56d3a96842Cff086DA36c623194ccB";
   const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string;
 
   const [name, setName] = useState("");

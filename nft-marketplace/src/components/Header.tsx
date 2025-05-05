@@ -20,6 +20,7 @@ export default function Header() {
                     <Link to="/" className="hover:text-gray-400">Home</Link>
                     <Link to="/explore" className="hover:text-gray-400">Explore</Link>
                     <Link to="/create" className="hover:text-gray-400">Create</Link>  
+                    <Link to="/Marketplace" className="hover:text-gray-400">Marketplace</Link>  
                 </nav>
 
                 {/* Wallet Button */}
