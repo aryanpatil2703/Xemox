@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import contractABI from "../abi/NFTContract.json";
 import marketplaceABI from "../abi/Marketplace.json";
+import { ethers } from "ethers";
 import { formatEther, parseEther } from "ethers";
+import { Contract, JsonRpcProvider } from "ethers";
+import { BrowserProvider } from "ethers";
 import axios from "axios";
 import WalletConnect from "../components/WalletConnect"; // adjust path if needed
+import ERC721_ABI from '../abi/ERC721_ABI.json';
 
 const MARKETPLACE_ADDRESS = "0xbb9602669CDD35a619Ae6B34A726dbc366e74ad9";
 const NFT_CONTRACT_ADDRESS = "0xD94186784d56d3a96842Cff086DA36c623194ccB";
@@ -133,26 +137,26 @@ export default function Marketplace() {
   }
 };
 
-  // Check if a token is already listed
-  const checkIfListed = async (tokenId: bigint) => {
-    try {
-      const { Contract } = await import("ethers");
-      const provider = new (await import("ethers")).JsonRpcProvider(
-        process.env.VITE_PUBLIC_RPC_URL
-      );
-      const contract = new Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, provider);
-      // Find if token is listed and active
-      const allListings = await contract.getAllListings();
-      return allListings.some(
-        (listing: any) =>
-          listing.nftContract.toLowerCase() === NFT_CONTRACT_ADDRESS.toLowerCase() &&
-          listing.tokenId.toString() === tokenId.toString() &&
-          listing.isActive
-      );
-    } catch (error) {
-      return false;
-    }
-  };
+const RPC_URL = import.meta.env.VITE_PUBLIC_RPC_URL || "https://mainnet.infura.io/v3/your-key";
+
+const checkIfListed = async (tokenId: bigint): Promise<boolean> => {
+  try {
+    const provider = new JsonRpcProvider(RPC_URL);
+    const contract = new Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, provider);
+
+    const allListings = await contract.getAllListings();
+
+    return allListings.some(
+      (listing: any) =>
+        listing.nftContract.toLowerCase() === NFT_CONTRACT_ADDRESS.toLowerCase() &&
+        listing.tokenId.toString() === tokenId.toString() &&
+        listing.isActive
+    );
+  } catch (error) {
+    console.error("checkIfListed error:", error);
+    return false;
+  }
+};
 
   // Check if NFT is approved for marketplace
   const checkApproval = async (tokenId: bigint) => {
@@ -221,43 +225,38 @@ export default function Marketplace() {
 
   // List NFT for sale
   const handleListNFT = async () => {
-    if (!connectedAddress || !nftToList || !listPrice) return;
     try {
-      setTxStatus("listing");
-      const { Contract, parseEther } = await import("ethers");
-      // @ts-ignore
-      const provider = new (await import("ethers")).BrowserProvider(window.ethereum);
+      const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const nftContract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, signer);
-
-      // Approve marketplace if not already approved
-      const approvedAddress = await nftContract.Approval(nftToList.tokenId);
-      if (approvedAddress.toLowerCase() !== MARKETPLACE_ADDRESS.toLowerCase()) {
-        const approveTx = await nftContract.approve(
-          MARKETPLACE_ADDRESS,
-          nftToList.tokenId
-        );
-        await approveTx.wait();
+  
+      
+      const tokenId = 7;
+      const price = parseEther("1"); // or any price you want
+  
+      
+  
+      // 1. Create instance of NFT contract
+      const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, ERC721_ABI, signer);
+  
+      // 2. Check if approved
+      const approvedAddress = await nftContract.getApproved(tokenId);
+  
+      if (approvedAddress !== MARKETPLACE_ADDRESS) {
+        const tx = await nftContract.approve(MARKETPLACE_ADDRESS, tokenId);
+        await tx.wait();
+        console.log("NFT approved");
       }
-
-      // List NFT
-      const marketplaceContract = new Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, signer);
-      const tx = await marketplaceContract.listItem(
-        NFT_CONTRACT_ADDRESS,
-        nftToList.tokenId,
-        parseEther(listPrice)
-      );
+  
+      
+      const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, signer);
+  
+      // 4. List the NFT
+      const tx = await marketplace.listItem(NFT_CONTRACT_ADDRESS, tokenId, price);
       await tx.wait();
-
-      setShowListModal(false);
-      setListPrice("");
-      setNftToList(null);
-      setTxStatus("success");
-      loadListings();
-      loadUserNFTs();
-    } catch (error) {
-      console.error("Listing failed:", error);
-      setTxStatus("error");
+      console.log("NFT listed successfully");
+  
+    } catch (err) {
+      console.error("Listing failed:", err);
     }
   };
 

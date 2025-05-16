@@ -23,7 +23,7 @@
     "@tanstack/react-query": "^5.66.9",
     "@wagmi/core": "^2.16.5",
     "axios": "^1.9.0",
-    "ethers": "^6.13.7",
+    "ethers": "^6.14.1",
     "framer-motion": "^12.9.4",
     "ipfs-http-client": "^60.0.1",
     "nft.storage": "^7.2.0",
@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.15.18",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
