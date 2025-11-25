@@ -6,7 +6,7 @@ export default function Header() {
     
 
     return (
-        <header className=" backdrop-blur-lg text-white py-4 shadow-md fixed top-0 left-0 w-full z-50">
+        <header className=" backdrop-blur-lg text-white py-4 shadow-md top-0 left-0 w-full z-50">
             <div className="container mx-auto flex justify-between items-center px-6">
                 
                 {/* Logo Section */}
@@ -18,7 +18,6 @@ export default function Header() {
                 {/* Navigation Links */}
                 <nav className="hidden md:flex space-x-6">
                     <Link to="/" className="hover:text-gray-400">Home</Link>
-                    <Link to="/explore" className="hover:text-gray-400">Explore</Link>
                     <Link to="/create" className="hover:text-gray-400">Create</Link>  
                     <Link to="/Marketplace" className="hover:text-gray-400">Marketplace</Link>  
                 </nav>

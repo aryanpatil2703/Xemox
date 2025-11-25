@@ -60,7 +60,7 @@ export default function WalletConnect({ onWalletUpdate = () => {} }: WalletConne
       {user && displayedAddress ? (
         <button
           onClick={() => navigate("/profile")}
-          className="text-white bg-gray-900 border border-gray-700 px-4 py-2 rounded-lg hover:bg-gray-800 transition duration-300"
+          className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-4 py-2 rounded-lg transition duration-300 shadow-md"
         >
           {`${displayedAddress.slice(0, 6)}...${displayedAddress.slice(-4)}`}
         </button>
@@ -78,13 +78,13 @@ export default function WalletConnect({ onWalletUpdate = () => {} }: WalletConne
         <div className="absolute right-0 top-full mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-lg text-white">
           <button
             onClick={() => navigate("/profile")}
-            className="block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
+            className="bg-gradient-to-r from-blue-500 to-blue-700 block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
           >
             Profile
           </button>
           <button
             onClick={handleDisconnect}
-            className="block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
+            className="bg-gradient-to-r from-blue-500 to-blue-700 block w-full text-left px-4 py-2 hover:bg-gray-800 transition duration-300"
           >
             Disconnect Wallet
           </button>

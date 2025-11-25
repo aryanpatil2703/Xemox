@@ -62,29 +62,47 @@ export default function Marketplace() {
   const loadListings = async () => {
     setTxStatus("idle");
     try {
-      const { Contract } = await import("ethers");
-      const provider = new (await import("ethers")).JsonRpcProvider(
-        process.env.VITE_PUBLIC_RPC_URL
-      );
+      if (!import.meta.env.VITE_PUBLIC_RPC_URL) {
+        throw new Error("RPC URL not configured. Please check your environment variables.");
+      }
+
+      const provider = new JsonRpcProvider(import.meta.env.VITE_PUBLIC_RPC_URL);
       const contract = new Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, provider);
+
+      console.log("Fetching listings from contract...");
       const allListings = await contract.getAllListings();
+      console.log("Raw listings from contract:", allListings);
 
       const formattedListings = await Promise.all(
-        allListings.map(async (listing: any) => {
-          const nftContract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
-          const tokenURI = await nftContract.tokenURI(listing.tokenId);
-          const metadata = await axios.get(tokenURI);
-          return {
-            listingId: listing.listingId ?? listing.id,
-            price: formatEther(listing.price),
-            tokenId: listing.tokenId,
-            image: metadata.data.image,
-            name: metadata.data.name,
-            seller: listing.seller,
-          };
-        })
+        allListings
+          .filter((listing: any) => listing.isActive) // Only process active listings
+          .map(async (listing: any) => {
+            try {
+              const nftContract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
+              const tokenURI = await nftContract.tokenURI(listing.tokenId);
+              console.log(`Fetching metadata for token ${listing.tokenId} from URI:`, tokenURI);
+              const metadata = await axios.get(tokenURI);
+              console.log(`Metadata for token ${listing.tokenId}:`, metadata.data);
+
+              return {
+                listingId: listing.listingId ?? BigInt(0),
+                price: formatEther(listing.price),
+                tokenId: listing.tokenId,
+                image: metadata.data.image,
+                name: metadata.data.name,
+                seller: listing.seller,
+              };
+            } catch (error) {
+              console.error(`Error processing listing for token ${listing.tokenId}:`, error);
+              return null;
+            }
+          })
       );
-      setListings(formattedListings);
+
+      // Filter out any null entries from failed processing
+      const validListings = formattedListings.filter((listing): listing is NFTListing => listing !== null);
+      console.log("Formatted listings:", validListings);
+      setListings(validListings);
     } catch (error) {
       console.error("Error loading listings:", error);
     }
@@ -92,71 +110,69 @@ export default function Marketplace() {
 
   // Load user's NFTs that are NOT listed
   const loadUserNFTs = async () => {
-  if (!connectedAddress) return;
-  try {
-    const { Contract } = await import("ethers");
-    // Use a provider that can sign (for ownerOf)
-    // @ts-ignore
-    const provider = new (await import("ethers")).BrowserProvider(window.ethereum);
-    const nftContract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
-
-    // Try to get the highest minted tokenId (if contract has totalSupply)
-    let maxTokenId = 0;
+    if (!connectedAddress) return;
     try {
-      maxTokenId = await nftContract.totalSupply();
-      maxTokenId = Number(maxTokenId);
-    } catch {
-      // fallback: set a reasonable upper bound
-      maxTokenId = 50;
-    }
+      const { Contract } = await import("ethers");
+      // Use a provider that can sign (for ownerOf)
+      // @ts-ignore
+      const provider = new (await import("ethers")).BrowserProvider(window.ethereum);
+      const nftContract = new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
 
-    const userTokens: UserNFT[] = [];
-    for (let tokenId = 0; tokenId < maxTokenId; tokenId++) {
+      // Try to get the highest minted tokenId (if contract has totalSupply)
+      let maxTokenId = 0;
       try {
-        const owner = await nftContract.ownerOf(tokenId);
-        if (owner.toLowerCase() !== connectedAddress.toLowerCase()) continue;
-        // Check if already listed
-        const isListed = await checkIfListed(BigInt(tokenId));
-        if (!isListed) {
-          const tokenURI = await nftContract.tokenURI(tokenId);
-          const metadata = await axios.get(tokenURI);
-          userTokens.push({
-            tokenId: BigInt(tokenId),
-            image: metadata.data.image,
-            name: metadata.data.name,
-          });
-        }
-      } catch (err) {
-        // tokenId might not exist, just skip
-        continue;
+        maxTokenId = await nftContract.totalSupply();
+        maxTokenId = Number(maxTokenId);
+      } catch {
+        // fallback: set a reasonable upper bound
+        maxTokenId = 50;
       }
+
+      const userTokens: UserNFT[] = [];
+      for (let tokenId = 0; tokenId < maxTokenId; tokenId++) {
+        try {
+          const owner = await nftContract.ownerOf(tokenId);
+          if (owner.toLowerCase() !== connectedAddress.toLowerCase()) continue;
+          // Check if already listed
+          const isListed = await checkIfListed(BigInt(tokenId));
+          if (!isListed) {
+            const tokenURI = await nftContract.tokenURI(tokenId);
+            const metadata = await axios.get(tokenURI);
+            userTokens.push({
+              tokenId: BigInt(tokenId),
+              image: metadata.data.image,
+              name: metadata.data.name,
+            });
+          }
+        } catch (err) {
+          // tokenId might not exist, just skip
+          continue;
+        }
+      }
+      setUserNFTs(userTokens);
+    } catch (error) {
+      console.error("Error loading user NFTs:", error);
     }
-    setUserNFTs(userTokens);
-  } catch (error) {
-    console.error("Error loading user NFTs:", error);
-  }
-};
+  };
 
-const RPC_URL = import.meta.env.VITE_PUBLIC_RPC_URL || "https://mainnet.infura.io/v3/your-key";
+  const checkIfListed = async (tokenId: bigint): Promise<boolean> => {
+    try {
+      const provider = new JsonRpcProvider(import.meta.env.VITE_PUBLIC_RPC_URL);
+      const contract = new Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, provider);
 
-const checkIfListed = async (tokenId: bigint): Promise<boolean> => {
-  try {
-    const provider = new JsonRpcProvider(RPC_URL);
-    const contract = new Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, provider);
+      const allListings = await contract.getAllListings();
 
-    const allListings = await contract.getAllListings();
-
-    return allListings.some(
-      (listing: any) =>
-        listing.nftContract.toLowerCase() === NFT_CONTRACT_ADDRESS.toLowerCase() &&
-        listing.tokenId.toString() === tokenId.toString() &&
-        listing.isActive
-    );
-  } catch (error) {
-    console.error("checkIfListed error:", error);
-    return false;
-  }
-};
+      return allListings.some(
+        (listing: any) =>
+          listing.nftContract.toLowerCase() === NFT_CONTRACT_ADDRESS.toLowerCase() &&
+          listing.tokenId.toString() === tokenId.toString() &&
+          listing.isActive
+      );
+    } catch (error) {
+      console.error("checkIfListed error:", error);
+      return false;
+    }
+  };
 
   // Check if NFT is approved for marketplace
   const checkApproval = async (tokenId: bigint) => {
@@ -225,43 +241,45 @@ const checkIfListed = async (tokenId: bigint): Promise<boolean> => {
 
   // List NFT for sale
   const handleListNFT = async () => {
+    if (!nftToList || !listPrice) return;
+    const tokenId = nftToList.tokenId;
+    const price = parseEther(listPrice);
     try {
+      setTxStatus("listing");
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-  
-      
-      const tokenId = 7;
-      const price = parseEther("1"); // or any price you want
-  
-      
-  
+
       // 1. Create instance of NFT contract
       const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, ERC721_ABI, signer);
-  
+
       // 2. Check if approved
       const approvedAddress = await nftContract.getApproved(tokenId);
-  
       if (approvedAddress !== MARKETPLACE_ADDRESS) {
         const tx = await nftContract.approve(MARKETPLACE_ADDRESS, tokenId);
         await tx.wait();
         console.log("NFT approved");
       }
-  
-      
+
+      // 3. List the NFT
       const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MARKETPLACE_ABI, signer);
-  
-      // 4. List the NFT
       const tx = await marketplace.listItem(NFT_CONTRACT_ADDRESS, tokenId, price);
       await tx.wait();
       console.log("NFT listed successfully");
-  
+
+      setTxStatus("success");
+      setShowListModal(false);
+      setListPrice("");
+      setNftToList(null);
+      loadListings();
+      loadUserNFTs();
     } catch (err) {
       console.error("Listing failed:", err);
+      setTxStatus("error");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="pt-16 min-h-[calc(100vh-6rem)] bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">NFT Marketplace</h1>
@@ -298,7 +316,7 @@ const checkIfListed = async (tokenId: bigint): Promise<boolean> => {
                         setNftToList(nft);
                         setShowListModal(true);
                       }}
-                      className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors"
+                      className="w-full bg-green-600 text-black py-2 rounded hover:bg-green-700 transition-colors"
                     >
                       List for Sale
                     </button>
@@ -334,7 +352,7 @@ const checkIfListed = async (tokenId: bigint): Promise<boolean> => {
                 </p>
                 <button
                   onClick={() => handleBuy(listing)}
-                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors"
+                  className="w-full bg-blue-600 text-black py-2 rounded hover:bg-blue-700 transition-colors"
                   disabled={txStatus === "buying" || !connectedAddress}
                 >
                   {txStatus === "buying" ? "Processing..." : "Buy Now"}

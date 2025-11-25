@@ -90,7 +90,7 @@ export default function Profile() {
                 {/* Logout Button */}
                 <button 
                     onClick={logout} 
-                    className="mt-4 bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg shadow-md"
+                    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-4 py-2 rounded-lg transition duration-300 shadow-md"
                 >
                     Logout
                 </button>

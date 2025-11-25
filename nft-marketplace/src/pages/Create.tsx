@@ -170,20 +170,36 @@ export default function CreateNFT() {
           required
           disabled={status !== "idle"}
         />
+
+        {/* Hidden file input */}
         <input
+          id="file-upload"
           type="file"
           onChange={handleFileChange}
           accept="image/*"
-          className="w-full"
+          className="hidden"
           disabled={status !== "idle"}
         />
+
+        {/* Styled label acting as a button */}
+        <label
+          htmlFor="file-upload"
+          className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg cursor-pointer transition duration-300"
+        >
+          Choose File
+        </label>
+
         {imagePreview && (
-          <img src={imagePreview} alt="Preview" className="w-full h-64 object-contain mt-2 rounded-md" />
+          <img
+            src={imagePreview}
+            alt="Preview"
+            className="w-full h-64 object-contain mt-2 rounded-md"
+          />
         )}
         <button
           type="submit"
           disabled={!ready || !authenticated || !walletClient || status !== "idle"}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-300 w-full"
+          className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-4 py-2 rounded-lg transition duration-300 w-full"
         >
           {status === "uploading"
             ? "Uploading..."
